@@ -1,16 +1,28 @@
-import { Suspense } from "react";
 import { CreateGamepassClient } from "./CreateGamepassClient";
 
-export default function CreateGamepassPage() {
+type SearchParams = {
+  [key: string]: string | string[] | undefined;
+};
+
+export default function CreateGamepassPage({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
+  const orderId = (searchParams.orderId as string) || "";
+  const username = (searchParams.username as string) || "";
+  const userId = Number(searchParams.userId || "0");
+  const robux = Number(searchParams.robux || "0");
+  const requiredPrice = Number(searchParams.requiredPrice || "0");
+
   return (
-    <Suspense
-      fallback={
-        <main className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-black text-white flex items-center justify-center">
-          <p className="text-sm text-gray-300">Memuat halaman pembuatan gamepass...</p>
-        </main>
-      }
-    >
-      <CreateGamepassClient />
-    </Suspense>
+    <CreateGamepassClient
+      orderId={orderId}
+      username={username}
+      userId={userId}
+      robux={robux}
+      requiredPrice={requiredPrice}
+    />
   );
 }
+
