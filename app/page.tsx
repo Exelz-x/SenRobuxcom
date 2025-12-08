@@ -79,13 +79,15 @@ export default function HomePage() {
           username: robloxUser.name,
           userId: String(robloxUser.userId),
           robux: String(selectedRobux),
-          requiredPrice: String(data.debug?.requiredPrice ?? ""),
+          requiredPrice: String(data.requiredPrice ?? data.debug?.requiredPrice ?? ""),
         });
         window.location.href = `/create-gamepass?${params.toString()}`;
       } else if (data.next === "checkout") {
-        // untuk sekarang kita cuma kirim orderId,
-        // nanti kalau sudah pakai DB kita ambil detail dari server
-        window.location.href = `/checkout/${data.orderId}`;
+        const params = new URLSearchParams({
+          username: robloxUser.name,
+          robux: String(selectedRobux),
+        });
+        window.location.href = `/checkout/${data.orderId}?${params.toString()}`;
       }
     } catch (e) {
       alert("Terjadi kesalahan.");
@@ -176,7 +178,7 @@ export default function HomePage() {
           </p>
         </section>
 
-        {/* Nanti di bawah sini kita tambahkan FAQ, CS, kebijakan privasi, dsb */}
+        {/* TODO: FAQ, CS, dll */}
       </div>
     </main>
   );
