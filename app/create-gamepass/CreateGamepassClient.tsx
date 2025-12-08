@@ -1,18 +1,24 @@
 "use client";
 
-import { useSearchParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-export function CreateGamepassClient() {
-  const searchParams = useSearchParams();
+type Props = {
+  orderId: string;
+  username: string;
+  userId: number;
+  robux: number;
+  requiredPrice: number;
+};
+
+export function CreateGamepassClient({
+  orderId,
+  username,
+  userId,
+  robux,
+  requiredPrice,
+}: Props) {
   const router = useRouter();
-
-  const orderId = searchParams.get("orderId") || "";
-  const username = searchParams.get("username") || "";
-  const userId = Number(searchParams.get("userId") || "0");
-  const robux = Number(searchParams.get("robux") || "0");
-  const requiredPrice = Number(searchParams.get("requiredPrice") || "0");
-
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -118,7 +124,7 @@ export function CreateGamepassClient() {
         <section className="space-y-3">
           <h2 className="text-xl font-semibold">Tutorial membuat gamepass</h2>
           <div className="aspect-video rounded-2xl overflow-hidden border border-white/10 bg-black">
-            {/* GANTI src di bawah dengan video tutorial yang kamu mau */}
+            {/* GANTI src dengan video tutorial yang kamu mau */}
             <iframe
               className="w-full h-full"
               src="https://www.youtube.com/embed/dQw4w9WgXcQ"
@@ -177,7 +183,9 @@ export function CreateGamepassClient() {
           </button>
         </section>
 
-        {error && <p className="text-xs text-red-400 whitespace-pre-line">{error}</p>}
+        {error && (
+          <p className="text-xs text-red-400 whitespace-pre-line">{error}</p>
+        )}
       </div>
     </main>
   );
