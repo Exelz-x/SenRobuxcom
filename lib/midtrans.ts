@@ -1,0 +1,13 @@
+// src/lib/midtrans.ts
+
+// Pakai require biar nggak ribut soal tipe
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const midtransClient = require("midtrans-client");
+
+const isProduction = process.env.MIDTRANS_IS_PRODUCTION === "true";
+
+export const snap = new midtransClient.Snap({
+  isProduction,
+  serverKey: process.env.MIDTRANS_SERVER_KEY || "",
+  clientKey: process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || "",
+});
