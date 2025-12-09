@@ -3,14 +3,13 @@ export const runtime = "nodejs";
 import { NextRequest, NextResponse } from "next/server";
 import { createDokuCheckoutPayment } from "@/lib/doku";
 
-// Aturan harga dari jumlah Robux (SAMAKAN dengan yang kamu pakai di frontend)
+// Aturan harga dari jumlah Robux
 function getPriceFromRobux(robuxAmount: number): number {
   if (robuxAmount === 100) return 20000;
   if (robuxAmount === 200) return 38000;
   if (robuxAmount === 400) return 75000;
   if (robuxAmount === 800) return 145000;
 
-  // fallback, misal 1 Robux = 200 rupiah
   return robuxAmount * 200;
 }
 
@@ -20,13 +19,11 @@ export async function POST(req: NextRequest) {
 
     const rawOrderId = (body.orderId as string | undefined) ?? "";
 
-    // Ambil robux dari body.robuxAmount atau body.robux
     const rawRobux =
       body.robuxAmount !== undefined ? body.robuxAmount : body.robux;
 
     let robuxAmount = Number(rawRobux ?? 0);
 
-    // Kalau ngaco / 0 / NaN → fallback ke 100 Robux
     if (Number.isNaN(robuxAmount) || robuxAmount <= 0) {
       console.warn(
         "robuxAmount tidak valid dari client, pakai default 100. Value:",
@@ -35,7 +32,6 @@ export async function POST(req: NextRequest) {
       robuxAmount = 100;
     }
 
-    // Bikin orderId aman kalau kosong
     const safeOrderId =
       rawOrderId && rawOrderId.trim().length > 0
         ? rawOrderId.trim()
@@ -54,32 +50,53 @@ export async function POST(req: NextRequest) {
 
     const invoiceNumber = `SRBX-${safeOrderId}-${Date.now()}`;
 
-    const { paymentUrl, raw } = await createDokuCheckoutPayment({
+    const result = await createDokuCheckoutPayment({
       amount,
       invoiceNumber,
     });
 
+    if (!result.ok) {
+      // Kirim balik detail error dari DOKU ke frontend
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "DOKU mengembalikan error",
+          dokuStatus: result.status,
+          dokuResponse: result.data,
+          debug: {
+            safeOrderId,
+            robuxAmount,
+            amount,
+            invoiceNumber,
+          },
+        },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json({
       ok: true,
-      paymentUrl,
-      dokuRaw: raw,
+      paymentUrl: result.paymentUrl,
       debug: {
         safeOrderId,
         robuxAmount,
         amount,
         invoiceNumber,
+        dokuStatus: result.status,
       },
     });
-  } catch (err: any) {
+  } catch (err) {
     console.error("Error di /api/payment/doku/checkout:", err);
     return NextResponse.json(
       {
         ok: false,
-        error: "Gagal inisiasi pembayaran DOKU. Cek log server.",
+        error:
+          "Gagal inisiasi pembayaran DOKU di server (exception di route).",
       },
       { status: 500 }
     );
   }
 }
+
 
 

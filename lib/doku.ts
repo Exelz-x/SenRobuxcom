@@ -15,7 +15,7 @@ const DOKU_BASE_URL = DOKU_IS_PRODUCTION
   ? "https://api.doku.com"
   : "https://api-sandbox.doku.com";
 
-// Generate signature sesuai dokumentasi DOKU Checkout
+// Generate signature sesuai dok DOKU Checkout
 // Request-Target untuk Checkout: /checkout/v1/payment
 function generateDokuSignature(
   body: unknown,
@@ -26,36 +26,43 @@ function generateDokuSignature(
   const jsonBody = JSON.stringify(body);
 
   // Digest = base64(SHA256(body))
-  const digest = crypto
-    .createHash("sha256")
-    .update(jsonBody, "utf8")
-    .digest("base64");
+  const hash = crypto.createHash("sha256").update(jsonBody, "utf8").digest();
+  const digestBase64 = hash.toString("base64");
 
-  // Susun komponen signature
+  // String yang di-sign
   const signatureComponents =
     `Client-Id:${DOKU_CLIENT_ID}\n` +
     `Request-Id:${requestId}\n` +
     `Request-Timestamp:${timestamp}\n` +
     `Request-Target:${requestTarget}\n` +
-    `Digest:${digest}`;
+    `Digest:${digestBase64}`;
 
   const hmac = crypto.createHmac("sha256", DOKU_SECRET_KEY);
   hmac.update(signatureComponents);
-  const signature = hmac.digest("base64");
+  const signatureBase64 = hmac.digest("base64");
 
   return {
-    digest,
-    signature: `HMACSHA256=${signature}`,
+    digestBase64,
+    signatureHeader: `HMACSHA256=${signatureBase64}`,
     jsonBody,
   };
 }
 
+/**
+ * CALL ke DOKU Checkout.
+ * TIDAK melempar error; selalu return object { ok, status, data, paymentUrl }
+ */
 export async function createDokuCheckoutPayment(opts: {
   amount: number;
   invoiceNumber: string;
 }) {
   if (!DOKU_CLIENT_ID || !DOKU_SECRET_KEY) {
-    throw new Error("DOKU env belum lengkap (CLIENT_ID / SECRET_KEY)");
+    return {
+      ok: false,
+      status: 0,
+      error: "DOKU env belum lengkap (CLIENT_ID / SECRET_KEY)",
+      data: null,
+    };
   }
 
   const { amount, invoiceNumber } = opts;
@@ -63,58 +70,81 @@ export async function createDokuCheckoutPayment(opts: {
   const requestId = crypto.randomUUID();
   const timestamp = new Date().toISOString(); // UTC ISO8601
 
-  // Body minimal sesuai docs DOKU Checkout: order + payment.payment_due_date
   const body = {
     order: {
       amount,
       invoice_number: invoiceNumber,
-      // currency: "IDR", // optional, default IDR
     },
     payment: {
-      payment_due_date: 60, // expired 60 menit
+      payment_due_date: 60,
     },
   };
 
-  const { signature, jsonBody } = generateDokuSignature(
+  const { digestBase64, signatureHeader, jsonBody } = generateDokuSignature(
     body,
     requestId,
     timestamp
   );
 
-  const res = await fetch(`${DOKU_BASE_URL}/checkout/v1/payment`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Client-Id": DOKU_CLIENT_ID,
-      "Request-Id": requestId,
-      "Request-Timestamp": timestamp,
-      Signature: signature,
-    },
-    body: jsonBody,
-  });
+  let text: string;
+  let data: any;
 
-  const data = await res.json().catch(() => ({}));
+  try {
+    const res = await fetch(`${DOKU_BASE_URL}/checkout/v1/payment`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Client-Id": DOKU_CLIENT_ID,
+        "Request-Id": requestId,
+        "Request-Timestamp": timestamp,
+        Signature: signatureHeader,
+        // Banyak contoh integrasi DOKU pakai header Digest juga
+        Digest: `SHA-256=${digestBase64}`,
+      },
+      body: jsonBody,
+    });
 
-  if (!res.ok) {
-    console.error("DOKU Checkout error:", res.status, data);
-    throw new Error(
-      `DOKU error ${res.status}: ${
-        (data as any)?.error?.message || JSON.stringify(data)
-      }`
-    );
+    text = await res.text();
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = text;
+    }
+
+    if (!res.ok) {
+      console.error("DOKU Checkout error:", res.status, data);
+      return {
+        ok: false,
+        status: res.status,
+        data,
+      };
+    }
+
+    const paymentUrl = (data as any)?.payment?.url;
+
+    if (!paymentUrl) {
+      console.error("Response DOKU tidak punya payment.url:", data);
+      return {
+        ok: false,
+        status: res.status,
+        data,
+        error: "payment.url tidak ditemukan di response DOKU",
+      };
+    }
+
+    return {
+      ok: true,
+      status: res.status,
+      data,
+      paymentUrl,
+    };
+  } catch (err: any) {
+    console.error("Error network/unknown saat call DOKU:", err);
+    return {
+      ok: false,
+      status: 0,
+      data: { error: String(err?.message || err) },
+    };
   }
-
-  // Response standar DOKU Checkout mengandung payment.url
-  // lihat docs: Backend Integration → obtain payment.url 
-  const paymentUrl = (data as any)?.payment?.url;
-
-  if (!paymentUrl) {
-    console.error("Response DOKU tidak punya payment.url:", data);
-    throw new Error("payment.url tidak ditemukan di response DOKU");
-  }
-
-  return {
-    paymentUrl,
-    raw: data,
-  };
 }
+
