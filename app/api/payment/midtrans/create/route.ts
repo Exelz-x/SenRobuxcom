@@ -26,16 +26,9 @@ export async function POST(req: NextRequest) {
         ? rawOrderId.trim()
         : `auto-${Date.now()}`;
 
-    if (!robuxAmount || Number.isNaN(robuxAmount)) {
+    if (Number.isNaN(robuxAmount) || robuxAmount <= 0) {
       return NextResponse.json(
-        { ok: false, error: "Jumlah Robux tidak valid" },
-        { status: 400 }
-      );
-    }
-
-    if (!robuxAmount || Number.isNaN(robuxAmount)) {
-      return NextResponse.json(
-        { ok: false, error: "Jumlah Robux tidak valid" },
+        { ok: false, error: `Jumlah Robux tidak valid: ${robuxAmount}` },
         { status: 400 }
       );
     }
