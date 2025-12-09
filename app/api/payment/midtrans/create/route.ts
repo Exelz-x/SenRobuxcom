@@ -16,13 +16,19 @@ function getPriceFromRobux(robuxAmount: number): number {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const orderId = body.orderId as string | undefined;
+    const rawOrderId = body.orderId as string | undefined;
     const username = (body.username as string | undefined) ?? "Customer";
     const robuxAmount = Number(body.robuxAmount || 0);
 
-    if (!orderId) {
+    // Kalau frontend nggak kirim orderId, kita bikin sendiri (biar nggak error)
+    const safeOrderId =
+      rawOrderId && rawOrderId.trim().length > 0
+        ? rawOrderId.trim()
+        : `auto-${Date.now()}`;
+
+    if (!robuxAmount || Number.isNaN(robuxAmount)) {
       return NextResponse.json(
-        { ok: false, error: "orderId wajib diisi" },
+        { ok: false, error: "Jumlah Robux tidak valid" },
         { status: 400 }
       );
     }
@@ -56,7 +62,7 @@ export async function POST(req: NextRequest) {
 
     const transaction = await snap.createTransaction({
       transaction_details: {
-        order_id: `senrobux-${orderId}-${Date.now()}`,
+        order_id: `senrobux-${safeOrderId}-${Date.now()}`,
         gross_amount: amount,
       },
       customer_details: {
