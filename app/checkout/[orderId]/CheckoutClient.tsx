@@ -1,138 +1,151 @@
 "use client";
 
-import Script from "next/script";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
-declare global {
-  interface Window {
-    snap: {
-      pay: (token: string, options?: any) => void;
-    };
-  }
-}
-
-type CheckoutClientProps = {
+interface CheckoutClientProps {
   orderId: string;
   username: string;
   robuxAmount: number;
-};
+}
+
+type PaymentMethod = "qris" | "member" | null;
 
 export function CheckoutClient({
   orderId,
   username,
   robuxAmount,
 }: CheckoutClientProps) {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(null);
+  const [showQrisPopup, setShowQrisPopup] = useState(false);
 
-  async function handlePay() {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/payment/midtrans/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          orderId,
-          username,
-          robuxAmount,
-        }),
-      });
+  // Nanti kalau mau dipakai lagi untuk Midtrans / member, bisa tambah state lain di sini
 
-      const data = await res.json();
-      if (!data.ok) {
-        setError(data.error || "Gagal membuat transaksi pembayaran.");
-        setLoading(false);
-        return;
-      }
+  function handleChooseQris() {
+    setPaymentMethod("qris");
+    setShowQrisPopup(true);
+  }
 
-      const snapToken = data.snapToken as string;
+  function handleAlreadyPaidQris() {
+    // Di sini kita belum cek apa-apa, cuma pindah ke halaman "Menunggu Pembayaran"
+    router.push(`/waiting-payment/${orderId}`);
+  }
 
-      if (!window.snap || !snapToken) {
-        setError("Snap JS belum siap atau token tidak valid.");
-        setLoading(false);
-        return;
-      }
-
-      window.snap.pay(snapToken, {
-        onSuccess: function () {
-          window.location.href = `/success/${orderId}`;
-        },
-        onPending: function () {
-          window.location.href = `/success/${orderId}`;
-        },
-        onError: function () {
-          setError("Terjadi error pada pembayaran.");
-        },
-        onClose: function () {
-          // user nutup popup tanpa bayar
-        },
-      });
-    } catch (e) {
-      console.error(e);
-      setError("Terjadi kesalahan saat menghubungi server.");
-    } finally {
-      setLoading(false);
-    }
+  function handleGoBackFromPopup() {
+    setShowQrisPopup(false);
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-black text-white">
-      {/* Script Midtrans Snap */}
-      <Script
-        src="https://app.sandbox.midtrans.com/snap/snap.js"
-        data-client-key={process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY}
-        strategy="afterInteractive"
-      />
+    <div className="max-w-xl mx-auto p-4 space-y-4">
+      <h1 className="text-2xl font-bold mb-2">Checkout Pesanan</h1>
 
-      <div className="max-w-xl mx-auto px-4 py-10 space-y-6">
-        <header className="space-y-2">
-          <h1 className="text-3xl font-bold">Pembayaran Pesanan</h1>
-          <p className="text-sm text-gray-300">
-            ID Pesanan: <span className="font-mono">#{orderId}</span>
-          </p>
-        </header>
-
-        <section className="rounded-2xl border border-white/10 bg-white/5 p-4 space-y-2 text-sm">
-          <p className="text-gray-200">Ringkasan pesanan:</p>
-          <ul className="list-disc list-inside text-gray-300 space-y-1">
-            <li>
-              Username Roblox:{" "}
-              <span className="font-semibold">{username}</span>
-            </li>
-            <li>
-              Jumlah Robux:{" "}
-              <span className="font-semibold">
-                {robuxAmount || "-"}
-              </span>
-            </li>
-            <li>
-              Metode bayar:{" "}
-              <span className="font-semibold">
-                QRIS / E-Wallet / VA (via Midtrans)
-              </span>
-            </li>
-          </ul>
-          <p className="text-xs text-gray-400">
-            Setelah klik &quot;Bayar Sekarang&quot;, akan muncul popup pembayaran
-            Midtrans (QRIS / e-wallet / dll).
-          </p>
-        </section>
-
-        {error && (
-          <p className="text-xs text-red-400 whitespace-pre-line">
-            {error}
-          </p>
-        )}
-
-        <button
-          onClick={handlePay}
-          disabled={loading}
-          className="rounded-2xl bg-emerald-500 px-6 py-3 text-sm font-semibold text-black disabled:opacity-40 disabled:cursor-not-allowed hover:bg-emerald-400 transition"
-        >
-          {loading ? "Membuat transaksi..." : "Bayar Sekarang"}
-        </button>
+      <div className="border rounded-lg p-3 bg-white/5">
+        <p className="text-sm text-gray-400">
+          Order ID: <span className="font-mono">{orderId}</span>
+        </p>
+        <p className="mt-1">
+          Username Roblox: <span className="font-semibold">{username}</span>
+        </p>
+        <p className="mt-1">
+          Jumlah Robux:{" "}
+          <span className="font-semibold">{robuxAmount} Robux</span>
+        </p>
       </div>
-    </main>
+
+      {/* PILIH METODE PEMBAYARAN */}
+      <div className="border rounded-lg p-3 bg-white/5 space-y-2">
+        <h2 className="font-semibold mb-1">Metode Pembayaran</h2>
+
+        <div className="flex flex-col gap-2">
+          <button
+            type="button"
+            onClick={handleChooseQris}
+            className={`w-full px-3 py-2 rounded-lg border text-left ${
+              paymentMethod === "qris"
+                ? "border-green-500 bg-green-500/10"
+                : "border-gray-600 hover:bg-white/5"
+            }`}
+          >
+            <div className="font-semibold">QRIS</div>
+            <div className="text-xs text-gray-400">
+              Scan barcode QRIS untuk membayar
+            </div>
+          </button>
+
+          <button
+            type="button"
+            disabled
+            className="w-full px-3 py-2 rounded-lg border border-gray-700 text-left opacity-60 cursor-not-allowed"
+          >
+            <div className="font-semibold">Pembayaran Member</div>
+            <div className="text-xs text-gray-400">
+              (Segera hadir — belum bisa digunakan)
+            </div>
+          </button>
+        </div>
+      </div>
+
+      {/* INFO TAMBAHAN */}
+      <p className="text-xs text-gray-400">
+        Setelah kamu memilih metode pembayaran, ikuti instruksi yang muncul.
+        Untuk saat ini pembayaran otomatis belum aktif, jadi admin akan mengecek
+        pembayaran kamu secara manual.
+      </p>
+
+      {/* POPUP / MODAL QRIS */}
+      {showQrisPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+          <div className="bg-[#111827] border border-gray-700 rounded-xl p-4 w-full max-w-sm relative">
+            <button
+              type="button"
+              onClick={handleGoBackFromPopup}
+              className="absolute right-3 top-2 text-gray-400 hover:text-white text-sm"
+            >
+              ✕
+            </button>
+
+            <h2 className="text-lg font-semibold mb-2">Bayar dengan QRIS</h2>
+            <p className="text-xs text-gray-400 mb-3">
+              Silakan scan barcode QRIS di bawah ini menggunakan aplikasi
+              pembayaran (Dana, OVO, GoPay, ShopeePay, dll) lalu bayar sesuai
+              nominal.
+            </p>
+
+            <div className="flex justify-center mb-3">
+              {/* Ganti /qris.png dengan file QRIS kamu di folder /public */}
+              <img
+                src="/qris.png"
+                alt="QRIS SenRobux"
+                className="w-48 h-48 border border-gray-600 rounded-lg bg-white"
+              />
+            </div>
+
+            <p className="text-xs text-gray-400 mb-3">
+              Setelah kamu membayar, tekan tombol{" "}
+              <span className="font-semibold">"Sudah dibayar"</span> di bawah
+              ini.
+            </p>
+
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={handleAlreadyPaidQris}
+                className="w-full py-2 rounded-lg bg-green-500 hover:bg-green-600 text-sm font-semibold"
+              >
+                Sudah dibayar
+              </button>
+              <button
+                type="button"
+                onClick={handleGoBackFromPopup}
+                className="w-full py-2 rounded-lg border border-gray-600 text-sm hover:bg-white/5"
+              >
+                Belum bayar / Kembali
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
