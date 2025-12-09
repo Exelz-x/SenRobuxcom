@@ -15,8 +15,6 @@ const DOKU_BASE_URL = DOKU_IS_PRODUCTION
   ? "https://api.doku.com"
   : "https://api-sandbox.doku.com";
 
-// Generate signature sesuai dok DOKU Checkout
-// Request-Target untuk Checkout: /checkout/v1/payment
 function generateDokuSignature(
   body: unknown,
   requestId: string,
@@ -25,11 +23,9 @@ function generateDokuSignature(
 ) {
   const jsonBody = JSON.stringify(body);
 
-  // Digest = base64(SHA256(body))
   const hash = crypto.createHash("sha256").update(jsonBody, "utf8").digest();
   const digestBase64 = hash.toString("base64");
 
-  // String yang di-sign
   const signatureComponents =
     `Client-Id:${DOKU_CLIENT_ID}\n` +
     `Request-Id:${requestId}\n` +
@@ -48,27 +44,14 @@ function generateDokuSignature(
   };
 }
 
-/**
- * CALL ke DOKU Checkout.
- * TIDAK melempar error; selalu return object { ok, status, data, paymentUrl }
- */
 export async function createDokuCheckoutPayment(opts: {
   amount: number;
   invoiceNumber: string;
 }) {
-  if (!DOKU_CLIENT_ID || !DOKU_SECRET_KEY) {
-    return {
-      ok: false,
-      status: 0,
-      error: "DOKU env belum lengkap (CLIENT_ID / SECRET_KEY)",
-      data: null,
-    };
-  }
-
   const { amount, invoiceNumber } = opts;
 
   const requestId = crypto.randomUUID();
-  const timestamp = new Date().toISOString(); // UTC ISO8601
+  const timestamp = new Date().toISOString();
 
   const body = {
     order: {
@@ -86,9 +69,6 @@ export async function createDokuCheckoutPayment(opts: {
     timestamp
   );
 
-  let text: string;
-  let data: any;
-
   try {
     const res = await fetch(`${DOKU_BASE_URL}/checkout/v1/payment`, {
       method: "POST",
@@ -98,13 +78,13 @@ export async function createDokuCheckoutPayment(opts: {
         "Request-Id": requestId,
         "Request-Timestamp": timestamp,
         Signature: signatureHeader,
-        // Banyak contoh integrasi DOKU pakai header Digest juga
         Digest: `SHA-256=${digestBase64}`,
       },
       body: jsonBody,
     });
 
-    text = await res.text();
+    const text = await res.text();
+    let data: any;
     try {
       data = JSON.parse(text);
     } catch {
@@ -147,4 +127,5 @@ export async function createDokuCheckoutPayment(opts: {
     };
   }
 }
+
 
