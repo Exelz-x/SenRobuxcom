@@ -50,6 +50,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // DEBUG: cek env yang dipakai server (tanpa bocorin full key)
+    const isProdEnv = process.env.MIDTRANS_IS_PRODUCTION;
+    const serverKeyPrefix = process.env.MIDTRANS_SERVER_KEY?.slice(0, 12);
+    const clientKeyPrefix =
+      process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY?.slice(0, 12);
+
+    console.log("MIDTRANS_IS_PRODUCTION =", isProdEnv);
+    console.log("MIDTRANS_SERVER_KEY prefix =", serverKeyPrefix);
+    console.log("MIDTRANS_CLIENT_KEY prefix =", clientKeyPrefix);
+
     if (!process.env.MIDTRANS_SERVER_KEY) {
       console.error("MIDTRANS_SERVER_KEY tidak di-set di environment");
       return NextResponse.json(
@@ -57,6 +67,11 @@ export async function POST(req: NextRequest) {
           ok: false,
           error:
             "Konfigurasi pembayaran belum lengkap (server key kosong). Hubungi admin.",
+          debug: {
+            isProduction: isProdEnv,
+            serverKeyPrefix,
+            clientKeyPrefix,
+          },
         },
         { status: 500 }
       );
@@ -85,14 +100,36 @@ export async function POST(req: NextRequest) {
       ok: true,
       snapToken: transaction.token,
       redirectUrl: transaction.redirect_url,
+      debug: {
+        isProduction: isProdEnv,
+        serverKeyPrefix,
+        clientKeyPrefix,
+      },
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error("Error create midtrans transaction:", err);
+
+    // Coba ambil info error dari Midtrans kalau ada
+    const httpStatusCode = err?.httpStatusCode;
+    const apiResponse = err?.ApiResponse;
+
+    const isProdEnv = process.env.MIDTRANS_IS_PRODUCTION;
+    const serverKeyPrefix = process.env.MIDTRANS_SERVER_KEY?.slice(0, 12);
+    const clientKeyPrefix =
+      process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY?.slice(0, 12);
+
     return NextResponse.json(
       {
         ok: false,
         error:
-          "Gagal membuat transaksi Midtrans di server. Detail error sudah dicatat.",
+          "Gagal membuat transaksi Midtrans di server. Cek konfigurasi Midtrans.",
+        midtransStatus: httpStatusCode ?? null,
+        midtransResponse: apiResponse ?? null,
+        debug: {
+          isProduction: isProdEnv,
+          serverKeyPrefix,
+          clientKeyPrefix,
+        },
       },
       { status: 500 }
     );
