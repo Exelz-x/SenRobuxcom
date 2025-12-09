@@ -40,9 +40,10 @@ export function CheckoutClient({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           orderId,
-          amount,
+          robuxAmount, // ⬅ kirim ini, bukan amount langsung
         }),
       });
+
 
       const data = await res.json();
 

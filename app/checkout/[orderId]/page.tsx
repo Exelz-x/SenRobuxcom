@@ -11,7 +11,6 @@ interface PageProps {
 
 export default function CheckoutPage({ params, searchParams }: PageProps) {
   const orderId = params.orderId;
-
   const username = (searchParams.username as string) || "Customer";
 
   const robuxParam =
@@ -30,4 +29,5 @@ export default function CheckoutPage({ params, searchParams }: PageProps) {
     />
   );
 }
+
 
