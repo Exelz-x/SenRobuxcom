@@ -10,12 +10,11 @@ export async function POST(req: NextRequest) {
     const rawOrderId = (body.orderId as string | undefined) ?? "";
     const amount = Number(body.amount || 0);
 
-    if (!rawOrderId) {
-      return NextResponse.json(
-        { ok: false, error: "orderId wajib diisi" },
-        { status: 400 }
-      );
-    }
+    // Bikin orderId aman kalau frontend nggak kirim / kosong
+    const safeOrderId =
+      rawOrderId && rawOrderId.trim().length > 0
+        ? rawOrderId.trim()
+        : `auto-${Date.now()}`;
 
     if (!Number.isFinite(amount) || amount <= 0) {
       return NextResponse.json(
@@ -24,8 +23,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // bikin invoice number unik untuk DOKU
-    const invoiceNumber = `SRBX-${rawOrderId}-${Date.now()}`;
+    // invoice_number harus unik di DOKU
+    const invoiceNumber = `SRBX-${safeOrderId}-${Date.now()}`;
 
     const { paymentUrl, raw } = await createDokuCheckoutPayment({
       amount,
@@ -36,6 +35,11 @@ export async function POST(req: NextRequest) {
       ok: true,
       paymentUrl,
       dokuRaw: raw,
+      debug: {
+        safeOrderId,
+        amount,
+        invoiceNumber,
+      },
     });
   } catch (err: any) {
     console.error("Error di /api/payment/doku/checkout:", err);
@@ -48,3 +52,4 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
