@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 
 type CheckoutClientProps = {
-  orderId: string;
+  orderId?: string;      // sekarang OPTIONAL
   username: string;
   robuxAmount: number;
 };
@@ -15,20 +15,24 @@ export default function CheckoutClient({
 }: CheckoutClientProps) {
   const [loading, setLoading] = useState(false);
 
-  const handlePayWithIpaymu = async () => {
-    if (!orderId) {
-      alert("Order ID tidak ditemukan. Coba ulangi dari awal.");
-      return;
+  // Kalau orderId dari props kosong / undefined,
+  // kita bikin ID sendiri, misalnya: "ORDER-1701234567890"
+  const effectiveOrderId = useMemo(() => {
+    if (orderId && orderId.trim().length > 0) {
+      return orderId;
     }
+    return `ORDER-${Date.now()}`;
+  }, [orderId]);
 
-    console.log("CLIENT - orderId yang dikirim ke API:", orderId);
-
+  const handlePayWithIpaymu = async () => {
     setLoading(true);
     try {
+      console.log("CLIENT - orderId yang DIKIRIM ke API:", effectiveOrderId);
+
       const res = await fetch("/api/payment/ipaymu/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId }),
+        body: JSON.stringify({ orderId: effectiveOrderId }),
       });
 
       const data = await res.json();
@@ -49,11 +53,11 @@ export default function CheckoutClient({
 
   return (
     <div className="space-y-4">
-      {/* Info order biar kita bisa cek orderId nya kepasang atau tidak */}
+      {/* Info order biar kelihatan apa yang dikirim */}
       <div className="rounded-md border p-4 space-y-1 text-sm">
         <p>
           <span className="font-semibold">Order ID:</span>{" "}
-          {orderId || "(kosong)"}
+          {effectiveOrderId}
         </p>
         <p>
           <span className="font-semibold">Username:</span> {username}
@@ -73,6 +77,7 @@ export default function CheckoutClient({
     </div>
   );
 }
+
 
 
 
