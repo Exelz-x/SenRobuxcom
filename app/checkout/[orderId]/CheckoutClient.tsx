@@ -21,6 +21,8 @@ export default function CheckoutClient({
       return;
     }
 
+    console.log("CLIENT - orderId yang dikirim ke API:", orderId);
+
     setLoading(true);
     try {
       const res = await fetch("/api/payment/ipaymu/checkout", {
@@ -47,9 +49,11 @@ export default function CheckoutClient({
 
   return (
     <div className="space-y-4">
+      {/* Info order biar kita bisa cek orderId nya kepasang atau tidak */}
       <div className="rounded-md border p-4 space-y-1 text-sm">
         <p>
-          <span className="font-semibold">Order ID:</span> {orderId || "(kosong)"}
+          <span className="font-semibold">Order ID:</span>{" "}
+          {orderId || "(kosong)"}
         </p>
         <p>
           <span className="font-semibold">Username:</span> {username}
@@ -69,5 +73,6 @@ export default function CheckoutClient({
     </div>
   );
 }
+
 
 

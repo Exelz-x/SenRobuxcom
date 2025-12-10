@@ -1,71 +1,50 @@
-"use client";
+import CheckoutClient from "./CheckoutClient";
 
-import { useState } from "react";
-
-type CheckoutClientProps = {
-  orderId: string;
-  username: string;
-  robuxAmount: number;
+type SearchParams = {
+  [key: string]: string | string[] | undefined;
 };
 
-export default function CheckoutClient({
-  orderId,
-  username,
-  robuxAmount,
-}: CheckoutClientProps) {
-  const [loading, setLoading] = useState(false);
+interface PageProps {
+  params: { orderId?: string }; // boleh undefined, kita tangani di bawah
+  searchParams: SearchParams;
+}
 
-  const handlePayWithIpaymu = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/payment/ipaymu/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId }),
-      });
+export default function CheckoutPage({ params, searchParams }: PageProps) {
+  // 1. coba ambil dari folder dinamis /checkout/[orderId]
+  const orderIdFromParams = params?.orderId;
 
-      const data = await res.json();
+  // 2. kalau nggak ada, coba ambil dari query string ?orderId=xxx
+  const rawOrderIdFromSearch = searchParams.orderId;
+  const orderIdFromSearch =
+    typeof rawOrderIdFromSearch === "string"
+      ? rawOrderIdFromSearch
+      : Array.isArray(rawOrderIdFromSearch)
+      ? rawOrderIdFromSearch[0]
+      : "";
 
-      if (!res.ok || !data.paymentUrl) {
-        alert(data.message ?? "Gagal membuat pembayaran Ipaymu");
-        return;
-      }
+  // 3. pilih yang ada
+  const orderId = orderIdFromParams || orderIdFromSearch || "";
 
-      window.location.href = data.paymentUrl;
-    } catch (err) {
-      console.error(err);
-      alert("Terjadi kesalahan.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const username = (searchParams.username as string) || "Customer";
+
+  const robuxParam =
+    (searchParams.robux as string | undefined) ??
+    (Array.isArray(searchParams.robux)
+      ? (searchParams.robux[0] as string)
+      : "0");
+
+  const robux = Number.parseInt(robuxParam || "0", 10) || 0;
 
   return (
-    <div className="space-y-4">
-      {/* Info order */}
-      <div className="rounded-md border p-4 space-y-1 text-sm">
-        <p>
-          <span className="font-semibold">Order ID:</span> {orderId}
-        </p>
-        <p>
-          <span className="font-semibold">Username:</span> {username}
-        </p>
-        <p>
-          <span className="font-semibold">Robux:</span> {robuxAmount}
-        </p>
-      </div>
-
-      {/* Tombol bayar */}
-      <button
-        onClick={handlePayWithIpaymu}
-        disabled={loading}
-        className="w-full rounded-md px-4 py-2 font-semibold border"
-      >
-        {loading ? "Mengalihkan ke Ipaymu..." : "Bayar dengan Ipaymu"}
-      </button>
-    </div>
+    <CheckoutClient
+      orderId={orderId}
+      username={username}
+      robuxAmount={robux}
+    />
   );
 }
+
+
 
 
 
