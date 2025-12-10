@@ -1,62 +1,50 @@
-interface SuccessPageProps {
+// app/success/[orderId]/page.tsx
+import Link from "next/link";
+
+interface PageProps {
   params: { orderId: string };
 }
 
-export default function SuccessPage({ params }: SuccessPageProps) {
+export default function SuccessPage({ params }: PageProps) {
   const { orderId } = params;
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-black text-white">
-      <div className="min-h-screen flex items-center justify-center px-4">
-        <div className="max-w-md w-full text-center space-y-6">
-          {/* Lingkaran centang */}
-          <div className="flex items-center justify-center">
-            <div className="h-24 w-24 rounded-full bg-emerald-500/10 border border-emerald-400 flex items-center justify-center">
-              <div className="h-16 w-16 rounded-full bg-emerald-500 flex items-center justify-center">
-                <svg
-                  className="h-10 w-10 text-black"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={3}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M20 6L9 17l-5-5" />
-                </svg>
-              </div>
+    <div className="min-h-screen bg-[#020617] text-white">
+      <header className="border-b border-green-500/20 bg-black/70 backdrop-blur">
+        <div className="mx-auto flex max-w-md items-center justify-between px-4 py-3">
+          <Link href="/" className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-green-500">
+              🎮
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <h1 className="text-2xl font-bold">Pesanan Berhasil Dibuat</h1>
-            <p className="text-sm text-gray-300">
-              Terima kasih! Pesanan kamu dengan ID{" "}
-              <span className="font-semibold text-emerald-300">#{orderId}</span> telah kami terima.
-            </p>
-            <p className="text-sm text-gray-300">
-              Mohon tunggu maksimal <span className="font-semibold">5 hari</span> kerja untuk proses
-              pengiriman Robux ke akun Roblox kamu.
-            </p>
-          </div>
-
-          <div className="text-xs text-gray-500 space-y-1">
-            <p>
-              Jika dalam waktu 5 hari Robux belum masuk, silakan hubungi customer service kami
-              dengan menyertakan ID pesanan dan username Roblox kamu.
-            </p>
-          </div>
-
-          <div>
-            <a
-              href="/"
-              className="inline-flex items-center justify-center rounded-2xl bg-white/10 px-5 py-2.5 text-sm font-semibold text-white hover:bg-white/20 transition"
-            >
-              Kembali ke Beranda
-            </a>
-          </div>
+            <span className="text-lg font-semibold text-green-400">
+              SenRobux
+            </span>
+          </Link>
         </div>
-      </div>
-    </main>
+      </header>
+
+      <main className="mx-auto flex min-h-[70vh] max-w-md flex-col items-center justify-center px-4 text-center">
+        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-500/20 text-3xl text-green-400">
+          ✅
+        </div>
+        <h1 className="text-xl font-bold">Pesanan Berhasil Dibuat</h1>
+        <p className="mt-2 text-sm text-gray-300">
+          Order ID:{" "}
+          <span className="font-mono text-xs text-gray-200">{orderId}</span>
+        </p>
+        <p className="mt-3 text-sm text-gray-300">
+          Terima kasih! Pesanan kamu telah tercatat di sistem kami. Robux akan
+          dikirim melalui Gamepass ke akun Roblox kamu maksimal{" "}
+          <span className="font-semibold text-green-400">5 hari kerja</span>.
+        </p>
+
+        <Link
+          href="/"
+          className="mt-6 w-full rounded-2xl bg-green-500 px-4 py-3 text-sm font-semibold text-black shadow-[0_0_25px_rgba(34,197,94,0.7)] hover:bg-green-400"
+        >
+          Kembali ke Beranda
+        </Link>
+      </main>
+    </div>
   );
 }
