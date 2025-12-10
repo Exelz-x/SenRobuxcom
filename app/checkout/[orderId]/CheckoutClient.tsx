@@ -2,15 +2,25 @@
 
 import { useState } from "react";
 
-// 👉 Tambah type props (kalau file kamu .tsx / TypeScript)
 type CheckoutClientProps = {
   orderId: string;
+  username: string;
+  robuxAmount: number;
 };
 
-export default function CheckoutClient({ orderId }: CheckoutClientProps) {
+export default function CheckoutClient({
+  orderId,
+  username,
+  robuxAmount,
+}: CheckoutClientProps) {
   const [loading, setLoading] = useState(false);
 
   const handlePayWithIpaymu = async () => {
+    if (!orderId) {
+      alert("Order ID tidak ditemukan. Coba ulangi dari awal.");
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await fetch("/api/payment/ipaymu/checkout", {
@@ -37,7 +47,17 @@ export default function CheckoutClient({ orderId }: CheckoutClientProps) {
 
   return (
     <div className="space-y-4">
-      {/* detail order bisa kamu taruh di sini */}
+      <div className="rounded-md border p-4 space-y-1 text-sm">
+        <p>
+          <span className="font-semibold">Order ID:</span> {orderId || "(kosong)"}
+        </p>
+        <p>
+          <span className="font-semibold">Username:</span> {username}
+        </p>
+        <p>
+          <span className="font-semibold">Robux:</span> {robuxAmount}
+        </p>
+      </div>
 
       <button
         onClick={handlePayWithIpaymu}
@@ -49,4 +69,5 @@ export default function CheckoutClient({ orderId }: CheckoutClientProps) {
     </div>
   );
 }
+
 
